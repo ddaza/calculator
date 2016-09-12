@@ -32,6 +32,6 @@ The app should start and update when changes are detected.
 
 The calculator is just an input that would take simple math operations and display their value when the user presses the 'Return/Enter' key.
 
-# Known Bugs: 
+## Known Bugs: 
 
 There is a problem with the Styling when working with multiple sessions and you'd need to refresh your page.
