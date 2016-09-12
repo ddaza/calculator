@@ -1,6 +1,6 @@
 'use strict';
 import React from 'react';
-import {Set, fromJS} from 'immutable';
+import {List, fromJS} from 'immutable';
 import _ from 'lodash';
 import cookie from 'react-cookie';
 import CalculatorOperations from './CalculatorComponents.react';
@@ -10,13 +10,13 @@ export default class Calculator extends React.Component {
   constructor(props, context) {
     super(props, context);
     this.state = {
-      operations: fromJS(cookie.load('operations') || []).toSet(),
+      operations: fromJS(cookie.load('operations') || []).toList(),
       currentOperation: null
     };
   }
 
   getOperationsList() {
-    return this.state.operations || new Set();
+    return this.state.operations || new List();
   }
 
   onChange(e) {
@@ -26,22 +26,27 @@ export default class Calculator extends React.Component {
   }
 
   saveState(operations) {
-    this.setState({operations});
-    cookie.save('operations', operations.slice(0, 9).toJS());
+    let newOperations = operations;
+
+    if (operations.size > 10) {
+      newOperations = operations.slice(operations.size - 10, operations.size);
+    }
+
+    this.setState({operations: newOperations});
+    cookie.save('operations', newOperations.toJS());
   }
 
   onKeyPress(e) {
     if (e.charCode === 13) {
       try {
+        const operations = this.getOperationsList();
         const result = eval(this.state.currentOperation);
-        const operations = this.getOperationsList()
-          .add(
-            String(this.state.currentOperation + ' = ' + result)
-        );
-
-        this.saveState(operations);
+        const stringResult = String(this.state.currentOperation + ' = ' + result);
+        if (!operations.contains(stringResult)) {
+          this.saveState(operations.push(stringResult));
+        }
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     }
   }

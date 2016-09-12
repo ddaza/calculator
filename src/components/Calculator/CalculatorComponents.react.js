@@ -1,6 +1,6 @@
 'use strict';
 import React from 'react';
-import {Set} from 'immutable';
+import {List} from 'immutable';
 
 export default class CalculatorOperations extends React.Component {
   render() {
@@ -8,7 +8,7 @@ export default class CalculatorOperations extends React.Component {
     return (
       <div className='calculators__operations'>
           {
-            operations.reverse().slice(0, 9).map((operation, index) => {
+            operations.reverse().map((operation, index) => {
               return <Operation key={index} operation={operation}/>;
             })
           }
@@ -18,7 +18,7 @@ export default class CalculatorOperations extends React.Component {
 }
 
 CalculatorOperations.propTypes = {
-  operations: React.PropTypes.instanceOf(Set)
+  operations: React.PropTypes.instanceOf(List)
 };
 
 class Operation extends React.Component {
