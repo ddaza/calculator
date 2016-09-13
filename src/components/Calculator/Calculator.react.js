@@ -9,6 +9,7 @@ import CalculatorOperations from './CalculatorComponents.react';
 export default class Calculator extends React.Component {
   constructor(props, context) {
     super(props, context);
+    // Load state from cookie
     this.state = {
       operations: fromJS(cookie.load('operations') || []).toList(),
       currentOperation: null
@@ -16,18 +17,20 @@ export default class Calculator extends React.Component {
   }
 
   getOperationsList() {
+    // get stored state or default to an empty list
     return this.state.operations || new List();
   }
 
   onChange(e) {
-    // TODO:  eval the operation and return value
-    const operation = _.replace(e.target.value, /([^\*\+\/\(\)\d]+)/gi, '');
+    // removed values that are not relevant to the calculator
+    const operation = _.replace(e.target.value, /([^\*\+\-\/\(\)\d]+)/gi, '');
     this.setState({currentOperation: operation});
   }
 
   saveState(operations) {
     let newOperations = operations;
 
+    // save state, only save the last 10 entries into the cookie/array
     if (operations.size > 10) {
       newOperations = operations.slice(operations.size - 10, operations.size);
     }
@@ -37,15 +40,19 @@ export default class Calculator extends React.Component {
   }
 
   onKeyPress(e) {
-    if (e.charCode === 13) {
+    // Calculate the value when the user presses Enter
+    if (e.charCode === 13) { // 13 -> Enter key
       try {
         const operations = this.getOperationsList();
+        // this is potentially dangerous so I took care of removing any characters that are
+        // could not be considered into the calculation and saved them into the state
         const result = eval(this.state.currentOperation);
         const stringResult = String(this.state.currentOperation + ' = ' + result);
         if (!operations.contains(stringResult)) {
           this.saveState(operations.push(stringResult));
         }
       } catch (error) {
+        // If the operation is invalid the console errors out and the value is not saved
         console.error(error);
       }
     }

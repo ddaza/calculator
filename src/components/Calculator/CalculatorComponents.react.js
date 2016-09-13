@@ -5,6 +5,7 @@ import {List} from 'immutable';
 export default class CalculatorOperations extends React.Component {
   render() {
     const {operations} = this.props;
+    // iterate on the operations
     return (
       <div className='calculators__operations'>
           {
@@ -24,7 +25,7 @@ CalculatorOperations.propTypes = {
 class Operation extends React.Component {
   render() {
     const {operation, key} = this.props;
-
+    // Display a single operation
     return (
       <div key={key} className='operation__entry'>
           <p>{operation}</p>
