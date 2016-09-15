@@ -2,10 +2,10 @@
 import React from 'react';
 import {List} from 'immutable';
 import _ from 'lodash';
+import uuid from 'node-uuid';
 import cookie from 'react-cookie';
 import CalculatorOperations from './CalculatorComponents.react';
 import {saveSession, saveCalculatorData, loadCalculatorData} from '../../api';
-import uuid from 'node-uuid';
 
 export default class Calculator extends React.Component {
   constructor(props, context) {
@@ -13,23 +13,30 @@ export default class Calculator extends React.Component {
     // Load state from cookie
 
     let sessionId = cookie.load('session');
-    let operations = new List();
 
     if (!sessionId) {
       sessionId = uuid.v1();
       cookie.save('session', sessionId);
       saveSession(sessionId);
-    } else {
-      loadCalculatorData(sessionId).then((data) => {
-        operations = data;
-      })
     }
 
     this.state = {
       session: sessionId,
-      operations: operations,
+      operations: new List(),
       currentOperation: null
     };
+  }
+
+  componentDidMount() {
+    const sessionId = this.state.session;
+
+    this.loadSession(sessionId).then((data) => {
+      this.setState({
+        session: sessionId,
+        operations: data,
+        currentOperation: null
+      });
+    });
   }
 
   getOperationsList() {
@@ -37,10 +44,47 @@ export default class Calculator extends React.Component {
     return this.state.operations || new List();
   }
 
+  loadInputSession() {
+    const sessionId = this.refs.sessionIdInput.value;
+    this.loadSession(sessionId).then((operations) => {
+      cookie.save('session', sessionId);
+      this.setState({session: sessionId, operations});
+    });
+  }
+
+  loadSession(sessionId) {
+    return loadCalculatorData(sessionId).then((data) => {
+      if (data === 'null') {
+        return new List();
+      } else {
+        return data;
+      }
+    });
+  }
+
   onChange(e) {
     // removed values that are not relevant to the calculator
     const operation = _.replace(e.target.value, /([^\*\+\-\/\(\)\d]+)/gi, '');
     this.setState({currentOperation: operation});
+  }
+
+  onKeyPress(e) {
+    // Calculate the value when the user presses Enter
+    if (e.charCode === 13) { // 13 -> Enter key
+      try {
+        const operations = this.getOperationsList();
+        // this is potentially dangerous so I took care of removing any characters that are
+        // could not be considered into the calculation and saved them into the state
+        const result = eval(this.state.currentOperation); // eslint-disable-line no-eval
+        const stringResult = String(this.state.currentOperation + ' = ' + result);
+        if (!operations.contains(stringResult)) {
+          this.saveState(operations.push(stringResult));
+        }
+      } catch (error) {
+        // If the operation is invalid the console errors out and the value is not saved
+        console.error(error); // eslint-disable-line no-console
+      }
+    }
   }
 
   saveState(operations) {
@@ -56,41 +100,59 @@ export default class Calculator extends React.Component {
     saveCalculatorData(sessionId, newOperations);
   }
 
-  onKeyPress(e) {
-    // Calculate the value when the user presses Enter
-    if (e.charCode === 13) { // 13 -> Enter key
-      try {
-        const operations = this.getOperationsList();
-        // this is potentially dangerous so I took care of removing any characters that are
-        // could not be considered into the calculation and saved them into the state
-        const result = eval(this.state.currentOperation);
-        const stringResult = String(this.state.currentOperation + ' = ' + result);
-        if (!operations.contains(stringResult)) {
-          this.saveState(operations.push(stringResult));
-        }
-      } catch (error) {
-        // If the operation is invalid the console errors out and the value is not saved
-        console.error(error); // eslint-disable-line no-console
-      }
-    }
-  }
 
   render() {
+    const sessionId = this.state.session;
+
     return (
       <div className='drone-strikes__wrapper'>
-        <p>
-          SessionId : {this.state.session}
-        </p>
+        <CalculatorSession
+          operations={this.getOperationsList()}
+          currentOperation={this.state.currentOperation}
+          sessionId={sessionId}
+          onChange={this.onChange.bind(this)}
+          onKeyPress={this.onKeyPress.bind(this)}
+        />
         <div>
-          <CalculatorOperations operations={this.getOperationsList()}/>
           <input
+            placeholder='Exisiting Session ID'
             type='text'
-            onChange={e => this.onChange(e)}
-            value={this.state.currentOperation}
-            onKeyPress={e => this.onKeyPress(e)}
+            ref='sessionIdInput'
           />
+          <button onClick={()=>this.loadInputSession()}>
+            Load Session
+          </button>
         </div>
       </div>
     );
   }
 }
+
+
+class CalculatorSession extends React.Component {
+  render() {
+    return (
+      <div>
+        <p>
+          SessionId : {this.props.sessionId}
+        </p>
+        <CalculatorOperations operations={this.props.operations}/>
+        <input
+          type='text'
+          placeholder='example: 2*2, 2-4'
+          onChange={e => this.props.onChange(e)}
+          value={this.props.currentOperation}
+          onKeyPress={e => this.props.onKeyPress(e)}
+        />
+      </div>
+    );
+  }
+}
+
+CalculatorSession.propTypes = {
+  operations: React.PropTypes.instanceOf(List),
+  currentOperation: React.PropTypes.string,
+  sessionId: React.PropTypes.string,
+  onChange: React.PropTypes.func,
+  onKeyPress: React.PropTypes.func
+};

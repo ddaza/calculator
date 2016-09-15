@@ -50,7 +50,11 @@ export function loadCalculatorData(sessionPath) {
   return new Promise((resolve, reject) => {
     try {
       calculatorSession.child(sessionPath).on('value', (data) => {
-        resolve(fromJS(data));
+        if (data.exists()) {
+          resolve(fromJS(data.val()));
+        } else {
+          reject('No Data');
+        }
       });
     } catch (e) {
       reject(e);
