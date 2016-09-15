@@ -1,7 +1,10 @@
+'use strict';
 import request from 'superagent';
 import {fromJS} from 'immutable';
-
+import Firebase from 'firebase';
 const timeout = 5000;  // 5 seconds
+
+const calculatorSession = new Firebase('https://calculator-dd.firebaseio.com/');
 
 function handleCall(resolve, reject) {
   return function (err, res) {
@@ -21,5 +24,36 @@ export function get(path, query={}) {
     .query(query)
     .timeout(timeout)
     .end(handleCall(resolve, reject));
+  });
+}
+
+export function post(path, query) {
+  return new Promise((resolve, reject) => {
+    request
+    .post(path)
+    .query(handleCall(query))
+    .timeout(timeout)
+    .end(handleCall(resolve, reject));
+  });
+}
+
+export function saveSession(sessionId) {
+  const session = calculatorSession.child(sessionId);
+  session.set('null');
+}
+
+export function saveCalculatorData(session, data) {
+  return calculatorSession.child(session).set(data.toJS());
+}
+
+export function loadCalculatorData(sessionPath) {
+  return new Promise((resolve, reject) => {
+    try {
+      calculatorSession.child(sessionPath).on('value', (data) => {
+        resolve(fromJS(data));
+      });
+    } catch (e) {
+      reject(e);
+    }
   });
 }

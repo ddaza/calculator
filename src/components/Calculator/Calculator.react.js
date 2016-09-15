@@ -1,17 +1,33 @@
 'use strict';
 import React from 'react';
-import {List, fromJS} from 'immutable';
+import {List} from 'immutable';
 import _ from 'lodash';
 import cookie from 'react-cookie';
 import CalculatorOperations from './CalculatorComponents.react';
-//import moment from 'moment';
+import {saveSession, saveCalculatorData, loadCalculatorData} from '../../api';
+import uuid from 'node-uuid';
 
 export default class Calculator extends React.Component {
   constructor(props, context) {
     super(props, context);
     // Load state from cookie
+
+    let sessionId = cookie.load('session');
+    let operations = new List();
+
+    if (!sessionId) {
+      sessionId = uuid.v1();
+      cookie.save('session', sessionId);
+      saveSession(sessionId);
+    } else {
+      loadCalculatorData(sessionId).then((data) => {
+        operations = data;
+      })
+    }
+
     this.state = {
-      operations: fromJS(cookie.load('operations') || []).toList(),
+      session: sessionId,
+      operations: operations,
       currentOperation: null
     };
   }
@@ -29,6 +45,7 @@ export default class Calculator extends React.Component {
 
   saveState(operations) {
     let newOperations = operations;
+    const sessionId = this.state.session;
 
     // save state, only save the last 10 entries into the cookie/array
     if (operations.size > 10) {
@@ -36,7 +53,7 @@ export default class Calculator extends React.Component {
     }
 
     this.setState({operations: newOperations});
-    cookie.save('operations', newOperations.toJS());
+    saveCalculatorData(sessionId, newOperations);
   }
 
   onKeyPress(e) {
@@ -53,7 +70,7 @@ export default class Calculator extends React.Component {
         }
       } catch (error) {
         // If the operation is invalid the console errors out and the value is not saved
-        console.error(error);
+        console.error(error); // eslint-disable-line no-console
       }
     }
   }
@@ -61,6 +78,9 @@ export default class Calculator extends React.Component {
   render() {
     return (
       <div className='drone-strikes__wrapper'>
+        <p>
+          SessionId : {this.state.session}
+        </p>
         <div>
           <CalculatorOperations operations={this.getOperationsList()}/>
           <input
